@@ -28,6 +28,16 @@ def post_request(
         proxy: dict = None,
         attempts: int = 3
 ) -> dict:
+    """
+    Функция для отправки post запросов
+    :param url: адрес запроса
+    :param params: параметры запроса
+    :param payload: полезная нагрузка
+    :param headers: заголовки
+    :param proxy: прокси
+    :param attempts: количество попыток отправить запрос
+    :return:
+    """
     for _ in range(attempts):
         try:
             response = requests.post(url=url, params=params, json=payload, headers=headers, proxies=proxy)
