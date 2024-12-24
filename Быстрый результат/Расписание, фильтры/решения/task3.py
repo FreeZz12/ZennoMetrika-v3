@@ -29,6 +29,11 @@ def schedule_and_filter(accounts: list[Account]) -> list[Account]:
         if status != 'pause':
             continue
 
+        # проверяем количество транзакций в таблице
+        txs = excel.get_counter('Transactions')
+        if txs >= 10:
+            continue
+
         # проверяем баланс профиля в таблице
         balance = excel.get_counter('Balance')
         # если баланс меньше 0.05, пропускаем аккаунт
