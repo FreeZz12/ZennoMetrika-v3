@@ -72,6 +72,7 @@ from datetime import datetime, timedelta
 
 from typing import Optional
 
+
 def set_time(profile_number: int) -> None:
     """
     Метод для записи даты и времени в файл. Если запись существует, она заменяется.
@@ -99,6 +100,7 @@ def set_time(profile_number: int) -> None:
         file.seek(0)
         file.writelines(lines)
 
+
 def get_date(profile_number: int) -> Optional[datetime]:
     """
     Метод для получения даты из файла. Если запись существует, возвращает дату, иначе 1 января 1970 года.
@@ -112,10 +114,11 @@ def get_date(profile_number: int) -> Optional[datetime]:
 
     with open(file_path) as file:
         for line in file:
-            if f'Профиль номер: {profile_number}' in line:
+            if f'Профиль номер: {profile_number}-' in line:
                 date_str = line.split('-')[1].strip()
                 return datetime.strptime(date_str, '%d/%m/%y %H:%M:%S')
     return datetime(1970, 1, 1)
+
 
 def is_check_date(profile_number: int, days: int) -> bool:
     """
