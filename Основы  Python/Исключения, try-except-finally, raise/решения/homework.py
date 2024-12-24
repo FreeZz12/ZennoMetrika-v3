@@ -1,4 +1,5 @@
 """"""
+from __future__ import annotations
 
 """
 Задание 1  - easy
@@ -40,7 +41,7 @@ get_request(url: str, params: dict, attempts: int = 5, return_exception: bool = 
 - если False, то вернет None.
 
 """
-from typing import Optional
+from typing import Optional, Union
 import random
 import time
 
@@ -52,7 +53,7 @@ class GetException(Exception):
 
 
 def get_request(url: str, params: dict, attempts: int = 5, return_exception: bool = False) -> Optional[
-    dict, list[dict]]:
+    Union[dict | list[dict]]]:
     """
     Метод для выполнения GET запроса, с повторением в случае неудачи.
     :param url: URL для запроса
