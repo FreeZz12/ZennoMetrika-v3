@@ -21,5 +21,15 @@
 
 # код пишем тут
 
+with open("passwords.txt", "r") as file:
+    passwords = file.read().splitlines()
+
+for password in passwords:
+    password = shuffle_seed(password)
+    password = salt_password(password)
+    with open("passwords_new.txt", "a") as file:
+        file.write(password + "\n")
+
+
 
 
