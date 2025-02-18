@@ -12,7 +12,6 @@
 # запрос баланса ERC20 токена
 # запрос decimal, symbol, name токена
 # реализация get_balance
-from __future__ import annotations
 
 import os
 from dotenv import load_dotenv

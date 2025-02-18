@@ -13,21 +13,6 @@ user_address: str - адрес пользователя
 Функция должна работать во всех EVM сетях со всеми токенами ERC20.
 
 """
-import json
-
-from web3 import Web3
-
-def get_balance(rpc: str, contract_address: str, user_address: str) -> float:
-    w3 = Web3(Web3.HTTPProvider(rpc))
-    with open('erc20.json') as file:
-        abi = json.loads(file.read())
-    contract_address = w3.to_checksum_address(contract_address)
-    user_address = w3.to_checksum_address(user_address)
-    contract = w3.eth.contract(address=contract_address, abi=abi)
-    balance_wei = contract.functions.balanceOf(user_address).call()
-    decimals = contract.functions.decimals.call()
-    return balance_wei / 10 ** decimals
-
 # код пишем тут
 
 """
@@ -69,38 +54,6 @@ get_balance(Chains.Arbitrum, Tokens.USDT_Arbitrum, '0x624c222fed7f88500afa5021cc
 
 # код пишем тут
 
-class Chain:
-    def __init__(self, name: str, rpc: str, native_token: str):
-        self.name = name
-        self.rpc = rpc
-        self.native_token = native_token
-
-class Chains:
-    Ethereum = Chain('Ethereum', 'https://1rpc.io/eth', 'ETH')
-    Arbitrum = Chain('Arbitrum', 'https://1rpc.io/arb', 'ETH')
-    Optimism = Chain('Optimism', 'https://1rpc.io/op', 'ETH')
-
-class Token:
-    def __init__(self, name: str, address: str, chain: Chain, decimals: int):
-        self.name = name
-        self.address = address
-        self.chain = chain
-        self.decimals = decimals
-
-class Tokens:
-    USDT_Ethereum = Token('USDT', '0xdac17f958d2ee523a2206206994597c13d831ec7', Chains.Ethereum, 6)
-    USDT_Arbitrum = Token('USDT', '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9', Chains.Arbitrum, 6)
-    USDT_Optimism = Token('USDT', '0x94b008aa00579c1307b0ef2c499ad98a8ce58e58', Chains.Optimism, 6)
-
-def get_balance(chain: Chain, token: Token, user_address: str) -> float:
-    w3 = Web3(Web3.HTTPProvider(chain.rpc))
-    with open('erc20.json') as file:
-        abi = json.loads(file.read())
-    contract_address = w3.to_checksum_address(token.address)
-    user_address = w3.to_checksum_address(user_address)
-    contract = w3.eth.contract(address=contract_address, abi=abi)
-    balance_wei = contract.functions.balanceOf(user_address).call()
-    return balance_wei / 10 ** token.decimals
 
 """
 Задание 3 - hard
@@ -134,31 +87,5 @@ print(onchain.get_balance(user_address='0x624c222fed7f88500afa5021cc760b3106fe34
 
 """
 
-class Onchain:
-    def __init__(self, chain: Chain, private_key: str):
-        self.chain = chain
-        self.private_key = private_key
-        self.w3 = Web3(Web3.HTTPProvider(chain.rpc))
-        self.address = self.w3.eth.account.from_key(private_key).address
-
-
-    def get_balance(self, token: Token = None, user_address: str = None) -> float:
-
-        if not user_address:
-            user_address = self.address
-        user_address = self.w3.to_checksum_address(user_address)
-        if not token:
-            return self.w3.eth.get_balance(user_address) / 10 ** 18
-
-        contract_address = self.w3.to_checksum_address(token.address)
-
-        with open('erc20.json') as file:
-            abi = json.loads(file.read())
-
-        contract = self.w3.eth.contract(address=contract_address, abi=abi)
-        balance_wei = contract.functions.balanceOf(user_address).call()
-        if not token.decimals:
-            token.decimals = contract.functions.decimals.call()
-        return balance_wei / 10 ** token.decimals
 # код пишем тут
 
