@@ -90,7 +90,7 @@ class Contracts:
         raise ValueError(f'Контракт {name} не найден в сети {chain.name}')
 
 
-def get_stargate_fee(contract: Contract,  to_chain: Chain, amount_wei: int) -> tuple[int, int]:
+def get_stargate_fee(contract: Contract,  to_chain: Chain, amount_wei: int, is_taxi: bool = False, extra: str = '0x') -> tuple[int, int]:
     min_amount = int(amount_wei * 0.995)
     fee = contract.functions.quoteSend(
         (
@@ -98,23 +98,30 @@ def get_stargate_fee(contract: Contract,  to_chain: Chain, amount_wei: int) -> t
             '0x' + account.address[2:].zfill(64),
             amount_wei,
             min_amount,
+            extra,
             '0x',
-            '0x',
-            '0x01'
+            '0x' if is_taxi else '0x01'
         ),
         False
     ).call()
     return fee
 
+def get_taxi_extra_params(gas_on_destination: int) -> str:
+    amount = hex(gas_on_destination)[2:].zfill(32)
+    address = account.address[2:].zfill(64)
+    extra = '0x000301003102' + amount + address
+    return extra
 
 def validate(contract: Contract, to_chain: Chain) -> bool:
     credit = contract.functions.paths(chains_eid[to_chain.chain_id]).call()
     return credit
 
-def bridge(to_chain: Chain, amount: Amount, token: Token | None = None):
+def bridge(to_chain: Chain, amount: Amount, token: Token | None = None, is_taxi: bool = False, gas_on_destination: float = 0):
 
     token_name = token.name.lower() if token else 'native'
     contract_data = Contracts.get_contract_data_by_name(f'stargate_pool_{token_name}', work_chain)
+    if token:
+        approve(w3, token, contract_data.address, amount, config.private_key)
 
     contract = w3.eth.contract(address=contract_data.address, abi=get_abi(contract_data.name))
 
@@ -122,11 +129,14 @@ def bridge(to_chain: Chain, amount: Amount, token: Token | None = None):
         print(f'Токен {token_name} не поддерживается для сети {to_chain.name}')
         return
 
-    if token:
-        approve(w3, token, contract_data.address, amount, config.private_key)
+    extra = '0x'
+
+    if token and gas_on_destination:
+        gas_on_destination = int(gas_on_destination * 10 ** 18)
+        extra = get_taxi_extra_params(gas_on_destination) if is_taxi else '0x000101'
 
     min_amount = int(amount.wei * 0.995)
-    fee = get_stargate_fee(contract, to_chain, amount.wei)
+    fee = get_stargate_fee(contract, to_chain, amount.wei, is_taxi, extra)
     value = fee[0] if token else fee[0] + amount.wei
     tx_params = get_tx_params(w3, value=value)
 
@@ -136,9 +146,9 @@ def bridge(to_chain: Chain, amount: Amount, token: Token | None = None):
             '0x' + account.address[2:].zfill(64),
             amount.wei,
             min_amount,
+            extra,
             '0x',
-            '0x',
-            '0x01'
+            '0x' if is_taxi else '0x01'
         ),
         _fee=fee,
         _refundAddress=account.address
@@ -150,7 +160,7 @@ def bridge(to_chain: Chain, amount: Amount, token: Token | None = None):
 def main():
     token = Tokens.get_token_by_name('USDT', work_chain)
     amount = Amount(0.0002)
-    bridge(to_chain=Chains.Optimism, amount=amount, token=None)
+    bridge(to_chain=Chains.Optimism, amount=amount, token=None, is_taxi=False, gas_on_destination=0.0005)
 
 
 if __name__ == '__main__':
