@@ -9,3 +9,5 @@
 .cursor/
 venv/
 venv
+.vscode
+nbconfig

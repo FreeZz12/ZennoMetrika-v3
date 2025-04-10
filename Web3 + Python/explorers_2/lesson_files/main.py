@@ -4,7 +4,7 @@ from datetime import datetime
 from dataclasses import dataclass
 import requests
 from eth_abi import decode
-import lesson_files.config as config
+import config as config
 
 
 url = 'https://api.etherscan.io/v2/api'
@@ -31,7 +31,7 @@ def get_block_by_timestamp(timestamp: int, chainid: int) -> str:
         'action': 'getblocknobytime',
         'timestamp': timestamp,
         'closest': 'before',
-        'apikey': config.ETHERSCAN_API_KEY,
+        'apikey': config.config.ETHERSCAN_API_KEY,
     }
     r = requests.get(url, params=params)
     r.raise_for_status()
