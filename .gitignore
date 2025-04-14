@@ -10,4 +10,7 @@
 venv/
 venv
 .vscode
+.vscode/
 nbconfig
+__pycache__
+__pycache__/
