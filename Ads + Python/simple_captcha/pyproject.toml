@@ -1,0 +1,19 @@
+[project]
+name = "simple-captcha"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "2captcha-python>=1.5.1",
+    "beautifulsoup4>=4.13.4",
+    "loguru>=0.7.3",
+    "playwright>=1.51.0",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.3",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+]
