@@ -1,11 +1,12 @@
 import os
 import shutil
+import time
 
 from loguru import logger
 import requests
 from better_proxy import Proxy
 from twocaptcha import TwoCaptcha  # install: pip install 2captcha-python
-from patchright.sync_api import sync_playwright, Browser, Page, expect
+from patchright.sync_api import sync_playwright, expect
 from fake_useragent import UserAgent
 
 from config import config
@@ -14,8 +15,13 @@ from ads import Ads
 solver = TwoCaptcha(config.TWO_CAPTCHA_API_KEY)
 
 
-def change_ip():
-    requests.get(config.LINK_IP_CHANGE)
+
+
+def change_ip(proxy):
+    # requests.get(config.LINK_IP_CHANGE)
+    response = requests.get('https://api.ipify.org/?format=json', proxies=proxy.as_proxies_dict)
+    logger.info(f'IP изменен: {response.text}')
+    time.sleep(3)
 
 
 def solve_captcha_in_ads():
@@ -93,67 +99,73 @@ def solve_captcha_in_ads():
 
 
 
-def solve_captcha_request():
-    change_ip()
-
-    proxy = Proxy.from_str(config.PROXY)
-
+def get_cookies_and_headers(proxy) -> tuple[dict, str]:
     user_agent = UserAgent(
-        browsers=['Chrome'],
+        browsers=['Chrome', 'Yandex Browser'],
         os=['Mac OS X'],
     ).random
 
-    shutil.rmtree('...')
+    if os.path.exists('temp'):
+        shutil.rmtree('temp')
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch_persistent_context(
-            user_data_dir="...",
+        context = playwright.chromium.launch_persistent_context(
+            user_data_dir="temp",
             channel="chrome",
-            headless=False,
+            headless=True,
             no_viewport=True,
             user_agent=user_agent,
             proxy=proxy.as_playwright_proxy,
-            slow_mo=1000
+            slow_mo=1000,
         )
+        page = context.new_page()
 
-        page = browser.new_page()
-        page.on("console", lambda msg: print(f"Сообщение консоли: {msg.text}"))
+
+        page.goto('https://coinlist.co/login')
+    
+        for _ in range(10):
+            if not page.get_by_text('Ray ID:').is_visible():
+                break
+            logger.info('Находимся на странице с Ray ID')
+            page.wait_for_timeout(1000)
+        else:
+            logger.error('Остались на странице с капчей')
+            return None, None
         
-        # Чтение содержимого файла render_listener.js
-        with open(os.path.join(os.path.dirname(__file__), 'render_listener.js'), 'r') as file:
-            script_content = file.read()
-            
-        # Добавляем init скрипт стандартным способом
-        page.add_init_script(
-            path=os.path.join(os.path.dirname(__file__), 'render_listener.js')
-        )
         page.wait_for_timeout(3000)
-        page.goto('https://coinlist.co/login', wait_until='domcontentloaded')
+        page.wait_for_load_state('load')
 
-        page.wait_for_timeout(3000)
+        expect(page.get_by_text("Don't have a CoinList account?")).to_be_visible(timeout=5000)
 
-        try:
-            expect(page.get_by_text('Use of the site is subject')).to_be_visible(timeout=10000)
-            logger.info('Сайт загрузился успешно')
-        except Exception as e:
-            if page.get_by_text('Ray ID:').is_visible():
-                logger.error('Остались на странице с капчей', e)
-                is_script_initialized = page.evaluate('''() => {
-                    try {
-                        return window.test === 1;
-                    } catch (e) {
-                        return false;
-                    }
-                }''', isolated_context=False)
-                logger.info(f'is_script_initialized: {is_script_initialized}')
-                # TODO: решить капчу через 2captcha
+        logger.info('Сайт загрузился успешно')
 
         logger.info('Скачиваем куки')
         cookies = page.context.cookies()
         user_agent = page.evaluate('navigator.userAgent', isolated_context=False)
         logger.info(f'user_agent: {user_agent}')
+        cookies_dict = {cookie['name']: cookie['value'] for cookie in cookies}
 
-    cookies_dict = {cookie['name']: cookie['value'] for cookie in cookies}
+        return cookies_dict, user_agent
+
+
+
+
+def solve_captcha_request():
+    proxy = Proxy.from_str(config.PROXY)
+    # change_ip(proxy)
+
+    for _ in range(10):
+        cookies_dict, user_agent = get_cookies_and_headers(proxy)
+        if cookies_dict and user_agent:
+            break
+        logger.info('Попытка получить куки и user_agent')
+        time.sleep(1)
+
+    logger.info(f'cookies_dict: {cookies_dict}')
+    logger.info(f'user_agent: {user_agent}')
+
+
+
     logger.info(f'cookies_dict: {cookies_dict}')
 
     headers = {
@@ -183,7 +195,8 @@ def solve_captcha_request():
     response = requests.get('https://coinlist.co/login',
                             cookies=cookies_dict, headers=headers, proxies=proxy.as_proxies_dict)
 
-    logger.info(f'response: {response.text}')
+    logger.info(f'Запрос пробил капчу: {"t have a CoinList account?" in response.text}')
+
 
 
 def response_example():
@@ -195,4 +208,4 @@ def response_example():
 
 if __name__ == "__main__":
     solve_captcha_request()
-    # solve_captcha_request()
+    # solve_captcha_in_ads()
