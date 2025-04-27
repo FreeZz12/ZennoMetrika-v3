@@ -19,4 +19,6 @@ logger.add(
 class config:
     TWO_CAPTCHA_API_KEY = os.getenv('TWO_CAPTCHA_API_KEY')
     SOLVECAPTCHA_API_KEY = os.getenv('SOLVECAPTCHA_API_KEY')
+    LINK_IP_CHANGE = os.getenv('LINK_IP_CHANGE')
+    PROXY = os.getenv('PROXY')
 
